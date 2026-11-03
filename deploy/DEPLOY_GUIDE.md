@@ -127,36 +127,84 @@ Updates appear automatically. There's nothing to reinstall when the website chan
 
 ---
 
-## Deploying to Vercel (Docker container)
+## Deploying to Vercel (Docker container, free TiDB Cloud database)
 
 Vercel does not run PHP natively. This project includes a `Dockerfile`, a `Caddyfile` and a `.dockerignore`, which Vercel's Container Runtime (Beta) builds. The database is a separate MySQL service, because InfinityFree does not allow outside connections to its databases.
 
-1. **Create the database.** In the Vercel dashboard, open **Marketplace** → **PlanetScale** and create a database named `aquado`. Copy its connection details: host, username, password and database name.
-2. **Import the tables.** From a computer with the MySQL client installed, run this once (replace the placeholders, then enter the password when asked):
+This guide uses **TiDB Cloud Starter**, which has a free tier (5 GiB storage and 50 million request units a month per instance, no credit card needed).
+
+### 1. Create the database (TiDB Cloud)
+
+1. Sign up at **tidbcloud.com** and create a **Starter** instance on **AWS**. Choose the region closest to you. Singapore (`ap-southeast-1`) is closest to the Philippines.
+2. Open the instance's networking settings. Make sure the **public endpoint** is on, and add the IP rule `0.0.0.0/0`. Vercel's outgoing IP addresses change, so the password and TLS are what protect the database.
+3. Click **Connect** (top right), then **Connect With: MySQL CLI**, then **Generate Password**. The password is shown only once. Write down the **host**, the **port** (4000) and the **username**. The username looks like `PREFIX.root`; keep the prefix and the dot.
+4. Create the database. Replace `HOST` and `PREFIX`, then enter the password when asked:
 
    ```bash
-   mysql --ssl-mode=REQUIRED -h HOST -u USERNAME -p DATABASE_NAME < database/aquado_schema.sql
+   mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p -e "CREATE DATABASE IF NOT EXISTS aquado;"
    ```
 
-   Use `database/aquado_schema.sql` from this repository, not `aquado_database.sql`.
-3. **Set the environment variables** in the Vercel project (**Settings** → **Environment Variables**):
+5. Import the tables from this repository. Run it from the project folder:
+
+   ```bash
+   grep -vE '^/\*!|^/\*M!' database/aquado_schema.sql | mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado
+   ```
+
+   The `grep` removes MySQL-only setting lines. The table and data statements stay.
+
+6. Check the tables. You should see 10, including `sessions` and `payment_proofs`.
+
+   ```bash
+   mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado -e "SHOW TABLES;"
+   ```
+
+### 2. Deploy on Vercel
+
+1. Choose **Add New → Project**, then import the GitHub repository. Vercel detects the root `Dockerfile` and selects the **Container** preset.
+2. Before deploying, add these **environment variables**. Set them for **Production** only, so preview deployments don't write to the live database.
 
    | Name | Value |
    |---|---|
-   | `DB_HOST` | the PlanetScale host |
-   | `DB_USER` | the username |
-   | `DB_PASS` | the password |
+   | `DB_HOST` | the host from step 1 |
+   | `DB_PORT` | `4000` |
+   | `DB_USER` | `PREFIX.root` (no quotes) |
+   | `DB_PASS` | the generated password |
    | `DB_NAME` | `aquado` |
    | `DB_SSL` | `true` |
 
-4. **Deploy.** Import the GitHub repository in Vercel (**Add New** → **Project**). Vercel detects the root `Dockerfile` and builds it.
-5. **Create staff accounts.** The schema file has no staff accounts, so add them once. Run this locally with your own password, then paste the hash into an `INSERT INTO users (fullname, email, password, role) VALUES (...)` statement (role `admin`, `cashier` or `driver`):
+3. Click **Deploy**. The first build can take a few minutes.
+4. Open the `*.vercel.app` address. It should redirect to `/Finals/`.
 
-   ```bash
-   php -r 'echo password_hash("CHOOSE-A-STRONG-PASSWORD", PASSWORD_DEFAULT), "\n";'
-   ```
+### 3. Create staff accounts
 
-Notes:
-- Vercel serves HTTPS, so the `.htaccess` HTTPS redirect is not used. The `Caddyfile` does the same job as the rest of `.htaccess` (`robots.txt`, `sitemap.xml`, blocked files).
-- Login sessions and GCash payment photos are stored in the database, so they work on any of Vercel's servers.
+Change the name, email, role (`admin`, `cashier` or `driver`) and password. Then run:
+
+```bash
+php -r 'echo "INSERT INTO users (fullname, email, password, role) VALUES (\"Admin\", \"admin@yourstation.test\", \"" . password_hash("CHOOSE-A-STRONG-PASSWORD", PASSWORD_DEFAULT) . "\", \"admin\");", "\n";' | mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado
+```
+
+Staff log in at `/Operations/`. Customers register on the site.
+
+### 4. Test
+
+- Register, log in, add to cart and check out (cash on delivery).
+- Log in to `/Operations/` as admin, confirm and dispatch the order. The driver accepts, picks up and delivers it.
+- Refresh a logged-in page a few times. You should stay logged in.
+- `/robots.txt` and `/sitemap.xml` return text. `/config.php` is blocked.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| "Database connection failed" | Check that `DB_PORT` is `4000`, `DB_USER` includes the prefix and `DB_SSL` is `true`. Then redeploy, because variable changes need a new deployment. |
+| Connection refused or timeout | The public endpoint is off, or the `0.0.0.0/0` rule is missing. |
+| Stops accepting connections partway through a month | The free monthly quota is used up. It resets each month, or you can raise the quota in the TiDB console. |
+| Import shows an error | Copy the message and send it with the step number. |
+
+### Notes
+
+- Login sessions and GCash payment photos are stored in the database. Each shrunk photo is about 150–600 KB.
+- `DB_SSL=true` encrypts the connection but does not check the server certificate.
+- Vercel's Hobby plan is for personal, non-commercial use. Check Vercel's terms before using it for the business.
 - Keep the repository private, because this guide names the default staff passwords.
+- **PlanetScale** is a paid alternative (its smallest plan is about $39 a month, plus storage). Its import needs safe migrations turned off on the `main` branch first, and its port is 3306, so leave `DB_PORT` at 3306 or unset.

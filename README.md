@@ -31,6 +31,6 @@ Payments: Unpaid → For Verification (rider collected cash, or uploaded a GCash
 
 ## Deploying
 
-See `deploy/DEPLOY_GUIDE.md` (InfinityFree hosting, Google Search Console, installing the driver app on Android, and deploying to Vercel as a Docker container with a PlanetScale MySQL database).
+See `deploy/DEPLOY_GUIDE.md` (InfinityFree hosting, Google Search Console, installing the driver app on Android, and deploying to Vercel as a Docker container with a free TiDB Cloud MySQL database).
 
 Private data (customer database exports, backups, payment photos) is excluded by `.gitignore`. Never commit real database credentials in `config.php`.
