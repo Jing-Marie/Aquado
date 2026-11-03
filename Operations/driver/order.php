@@ -176,19 +176,6 @@ $cssPath = "../style.css";
     </nav>
 </div>
 
-<script>
-// Preview the payment photo before sending it.
-document.querySelectorAll(".proof-input").forEach(function(input) {
-    input.addEventListener("change", function() {
-        const preview = input.closest("form").querySelector(".proof-preview");
-        if (input.files && input.files[0]) {
-            preview.src = URL.createObjectURL(input.files[0]);
-            preview.style.display = "block";
-        } else {
-            preview.style.display = "none";
-        }
-    });
-});
-</script>
+<script src="js/proof_photo.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
