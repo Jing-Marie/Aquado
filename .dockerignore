@@ -1,0 +1,16 @@
+# Keep the image small and free of private data (see .gitignore)
+.git
+Dockerfile
+**/*.sql
+deploy/
+_backup*/
+_archive/
+GPS tracker Update/
+Finals/vendor/
+Finals/composer.json
+Finals/composer.lock
+uploads/payment_proofs/*
+!uploads/payment_proofs/.gitkeep
+.DS_Store
+.vscode/
+.idea/

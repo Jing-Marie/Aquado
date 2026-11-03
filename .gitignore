@@ -1,0 +1,36 @@
+# --------------------------------------------------------
+# Kept out of the repository (private or generated files)
+# --------------------------------------------------------
+
+# Database dumps with real customer data and password hashes.
+# The clean structure for new setups is database/aquado_schema.sql.
+aquado_db.sql
+deploy/*.sql
+*.sql.gz
+
+# Generated upload package (rebuild it when deploying)
+deploy/*.zip
+
+# Backups made before each change
+_backup*/
+
+# Customers' GCash payment photos
+uploads/payment_proofs/*
+!uploads/payment_proofs/.gitkeep
+
+# Old projects / superseded versions
+_archive/
+GPS tracker Update/
+
+# Unused libraries and files
+Finals/vendor/
+Finals/composer.json
+Finals/composer.lock
+Finals/aquado.sql
+
+# OS / editor files
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

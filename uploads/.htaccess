@@ -1,0 +1,2 @@
+# Payment photos are only served through the apps' payment_proof.php (with access checks).
+Require all denied

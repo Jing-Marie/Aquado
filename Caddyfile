@@ -1,0 +1,16 @@
+# Web server for the Docker image (see Dockerfile). Serves the project root.
+# The host sets PORT (Vercel, `docker run -e PORT=...`); 80 otherwise.
+:{$PORT:80} {
+    root * /app
+    encode zstd gzip
+
+    # Search engine files (these were rewrites in .htaccess)
+    rewrite /robots.txt /robots.php
+    rewrite /sitemap.xml /sitemap.php
+
+    # Setup files, database scripts and payment photos are never served
+    @private path_regexp ^/(config|db|payment_proofs)\.php$|^/(database|uploads)/|\.(sql|md)$
+    respond @private 403
+
+    php_server
+}

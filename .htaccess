@@ -1,0 +1,21 @@
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Always use the secure (https) address on the live site.
+    # Skipped on this computer (localhost), which has no certificate.
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Search engine files
+    RewriteRule ^robots\.txt$ robots.php [L]
+    RewriteRule ^sitemap\.xml$ sitemap.php [L]
+</IfModule>
+
+# Keep setup files private
+<FilesMatch "^(config\.php|db\.php|payment_proofs\.php|.*\.sql|.*\.md)$">
+    Require all denied
+</FilesMatch>
