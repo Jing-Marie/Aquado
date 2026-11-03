@@ -5,6 +5,7 @@
 # Database dumps with real customer data and password hashes.
 # The clean structure for new setups is database/aquado_schema.sql.
 aquado_db.sql
+aquado.sql
 deploy/*.sql
 *.sql.gz
 
