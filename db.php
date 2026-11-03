@@ -20,9 +20,9 @@ function aquadoConnect() {
     if (DB_SSL) {
         // Hosted MySQL services (such as PlanetScale) only accept encrypted connections.
         $conn->ssl_set(null, null, null, null, null);
-        $conn->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, null, null, MYSQLI_CLIENT_SSL);
+        $conn->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT, null, MYSQLI_CLIENT_SSL);
     } else {
-        $conn->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $conn->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
     }
 
     $conn->set_charset("utf8mb4");
