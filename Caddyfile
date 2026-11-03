@@ -12,5 +12,14 @@
     @private path_regexp ^/(config|db|payment_proofs)\.php$|^/(database|uploads)/|\.(sql|md)$
     respond @private 403
 
+    # Static files (CSS, JS, images, fonts) may be kept for a day. Their links
+    # carry ?v=<deployment id>, so a new deploy gets new links.
+    @static path_regexp \.(css|js|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|json)$
+    header @static Cache-Control "public, max-age=86400"
+
+    # The driver app's service worker is checked for updates on every visit.
+    @serviceWorker path /Operations/sw.js
+    header @serviceWorker Cache-Control "no-cache"
+
     php_server
 }

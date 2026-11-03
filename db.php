@@ -15,6 +15,12 @@ require_once __DIR__ . "/config.php";
  */
 function aquadoConnect() {
 
+    // One connection per page request. The page and the session handler
+    // share it, which saves a second connection (several round trips).
+    if (isset($GLOBALS["aquadoConnection"])) {
+        return $GLOBALS["aquadoConnection"];
+    }
+
     $conn = mysqli_init();
 
     if (DB_SSL) {
@@ -26,6 +32,8 @@ function aquadoConnect() {
     }
 
     $conn->set_charset("utf8mb4");
+
+    $GLOBALS["aquadoConnection"] = $conn;
 
     return $conn;
 

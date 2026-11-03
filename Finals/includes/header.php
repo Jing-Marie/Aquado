@@ -134,7 +134,7 @@ if ($user && !empty($user["fullname"])) {
 
     <link
         rel="stylesheet"
-        href="<?php echo e($cssPath ?? "style.css"); ?>?v=<?php echo time(); ?>"
+        href="<?php echo e($cssPath ?? "style.css"); ?>?v=<?php echo ASSET_VERSION; ?>"
     >
 
 

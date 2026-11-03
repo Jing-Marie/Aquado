@@ -171,7 +171,7 @@ const TRACK_ORDER_NUMBER = <?php echo json_encode($trackOrder["order_number"]); 
 const CUSTOMER_ADDRESS = <?php echo json_encode($trackOrder["customer_address"]); ?>;
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/order_history.js?v=<?php echo time(); ?>"></script>
+<script src="js/order_history.js?v=<?php echo ASSET_VERSION; ?>"></script>
 <?php } ?>
 
 <?php include "includes/footer.php"; ?>

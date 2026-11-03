@@ -25,3 +25,16 @@ define("DB_USER", getenv("DB_USER") ?: "root");
 define("DB_PASS", getenv("DB_PASS") ?: "");
 define("DB_NAME", getenv("DB_NAME") ?: "aquado");
 define("DB_SSL", getenv("DB_SSL") === "true");
+
+/*
+|--------------------------------------------------------------------------
+| ASSET VERSION (added to CSS and JS links as ?v=...)
+|--------------------------------------------------------------------------
+|
+| On Vercel this is the deployment id, so browsers and the CDN keep the
+| files for a day but get new links after each deploy. Elsewhere the current
+| time is used, so files are never cached.
+|
+*/
+
+define("ASSET_VERSION", getenv("VERCEL_DEPLOYMENT_ID") ?: (getenv("VERCEL_GIT_COMMIT_SHA") ?: time()));

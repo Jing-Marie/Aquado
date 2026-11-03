@@ -117,7 +117,7 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "locations") {
 
     <link
         rel="stylesheet"
-        href="../style.css?v=<?php echo time(); ?>"
+        href="../style.css?v=<?php echo ASSET_VERSION; ?>"
     >
 
     <link
@@ -128,7 +128,7 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "locations") {
     <!-- DRIVER LOCATION CSS -->
     <link
         rel="stylesheet"
-        href="css/driver_locations.css?v=<?php echo time(); ?>"
+        href="css/driver_locations.css?v=<?php echo ASSET_VERSION; ?>"
     >
 
     <?php include __DIR__ . "/../includes/pwa_head.php"; ?>
@@ -221,7 +221,7 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "locations") {
 
 <!-- DRIVER LOCATION JS -->
 <script
-    src="js/driver_locations.js?v=<?php echo time(); ?>">
+    src="js/driver_locations.js?v=<?php echo ASSET_VERSION; ?>">
 </script>
 
 </body>

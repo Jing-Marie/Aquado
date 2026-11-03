@@ -23,7 +23,7 @@ $cssPath = "../style.css";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route Map View - Aquado Driver</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../style.css?v=<?php echo ASSET_VERSION; ?>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <?php include __DIR__ . "/../includes/pwa_head.php"; ?>
 </head>
@@ -82,8 +82,8 @@ const ROUTE_STOPS = <?php echo json_encode(array_map(function ($stop) {
 }, $stops)); ?>;
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/share_location.js?v=<?php echo time(); ?>"></script>
-<script src="js/routes.js?v=<?php echo time(); ?>"></script>
+<script src="js/share_location.js?v=<?php echo ASSET_VERSION; ?>"></script>
+<script src="js/routes.js?v=<?php echo ASSET_VERSION; ?>"></script>
 <?php } ?>
 </body>
 </html>
