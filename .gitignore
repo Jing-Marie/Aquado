@@ -6,6 +6,7 @@
 # The clean structure for new setups is database/aquado_schema.sql.
 aquado_db.sql
 aquado.sql
+aquado_tidb_import.sql
 deploy/*.sql
 *.sql.gz
 
