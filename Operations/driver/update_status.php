@@ -63,12 +63,26 @@ if ($action === "done" || $action === "resubmit_proof") {
         exit();
     }
 
-    if (completeDelivery($conn, $orderId, $driverId, trim($_POST["notes"] ?? ""), $proofFile)) {
+    // Proof of delivery: a photo of the delivered order and the empty containers collected.
+    $emptyRaw = trim($_POST["empty_containers"] ?? "");
+    if ($emptyRaw === "" || !ctype_digit($emptyRaw) || (int)$emptyRaw > 999) {
+        deletePaymentProof($conn, $proofFile);
+        backToOrder($orderId, "Enter how many empty containers you collected (0 if none).");
+    }
+    $emptyContainers = (int)$emptyRaw;
+
+    $error = "";
+    $deliveryPhoto = saveDeliveryPhoto($conn, $_FILES["delivery_photo"] ?? null, $error);
+    if ($deliveryPhoto === null) {
+        deletePaymentProof($conn, $proofFile);
+        backToOrder($orderId, $error);
+    }
+
+    if (completeDelivery($conn, $orderId, $driverId, trim($_POST["notes"] ?? ""), $proofFile, $deliveryPhoto, $emptyContainers)) {
         header("Location: history.php?completed=1");
     } else {
-        if ($proofFile !== null) {
-            deletePaymentProof($conn, $proofFile);
-        }
+        deletePaymentProof($conn, $proofFile);
+        deletePaymentProof($conn, $deliveryPhoto);
         header("Location: index.php?error=1");
     }
     exit();

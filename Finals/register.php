@@ -46,11 +46,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (
         $fullname === "" ||
+        $contact === "" ||
         $email === "" ||
+        $address === "" ||
         $password === ""
     ) {
 
-        $error = "Please fill in all required fields.";
+        $error = "Please fill in all required fields. Contact number and delivery address are required.";
+
+    } elseif (strlen(preg_replace("/\D/", "", $contact)) < 7) {
+
+        $error = "Please enter a valid contact number.";
 
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
@@ -200,7 +206,7 @@ $metaDescription = "Create a free Aquado account to order purified drinking wate
 
 $indexable = true;
 
-$activeNav = "auth";
+$activeNav = "register";
 
 $breadcrumb = "Authentication";
 
@@ -240,7 +246,7 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Full Name *</label>
+                <label>Full Name <span class="req">*</span></label>
 
                 <input
                     type="text"
@@ -255,13 +261,17 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Contact Number</label>
+                <label>Contact Number <span class="req">*</span></label>
 
                 <input
-                    type="text"
+                    type="tel"
                     name="contact_number"
                     placeholder="09XX XXX XXXX"
                     value="<?php echo e($_POST["contact_number"] ?? ""); ?>"
+                    pattern="[0-9+()\s\-]{7,20}"
+                    title="Enter a valid contact number (7 to 20 digits)"
+                    required
+                    aria-required="true"
                 >
 
             </div>
@@ -269,7 +279,7 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Email Address *</label>
+                <label>Email Address <span class="req">*</span></label>
 
                 <input
                     type="email"
@@ -284,12 +294,14 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Delivery Address</label>
+                <label>Delivery Address <span class="req">*</span></label>
 
                 <textarea
                     name="address"
                     rows="2"
                     placeholder="Your delivery address"
+                    required
+                    aria-required="true"
                 ><?php echo e($_POST["address"] ?? ""); ?></textarea>
 
             </div>
@@ -297,7 +309,7 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Password *</label>
+                <label>Password <span class="req">*</span></label>
 
                 <input
                     type="password"
@@ -311,7 +323,7 @@ include "includes/header.php";
 
             <div class="form-group">
 
-                <label>Confirm Password *</label>
+                <label>Confirm Password <span class="req">*</span></label>
 
                 <input
                     type="password"

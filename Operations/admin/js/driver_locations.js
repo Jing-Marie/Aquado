@@ -145,6 +145,8 @@ function updateMap(drivers) {
                 ${escapeHtml(driver.driver_name)}
             </strong>
 
+            ${driver.stale ? "<br><em>Last known location (" + escapeHtml(ageText(driver.seconds_ago)) + ")</em>" : ""}
+
             ${driver.orders.map(function(order) {
                 return `
                     <br>
@@ -211,6 +213,13 @@ function updateMap(drivers) {
                 );
 
         }
+
+
+        // GPS signal lost: keep the marker on the last known spot, shown faded.
+
+        driverMarkers[markerId].setOpacity(
+            driver.stale ? 0.55 : 1
+        );
 
     });
 
@@ -340,17 +349,35 @@ function updateDriverList(drivers) {
         ) {
 
 
-            locationStatus = `
+            if (driver.stale) {
 
-                <div class="driver-status status-online">
+                locationStatus = `
 
-                    <i class="fa-solid fa-circle"></i>
+                    <div class="driver-status status-waiting">
 
-                    Location available
+                        <i class="fa-solid fa-triangle-exclamation"></i>
 
-                </div>
+                        GPS signal lost. Showing last known location.
 
-            `;
+                    </div>
+
+                `;
+
+            } else {
+
+                locationStatus = `
+
+                    <div class="driver-status status-online">
+
+                        <i class="fa-solid fa-circle"></i>
+
+                        Location available
+
+                    </div>
+
+                `;
+
+            }
 
 
             if (
@@ -365,12 +392,33 @@ function updateDriverList(drivers) {
                         ${escapeHtml(
                             driver.last_updated
                         )}
+                        (${escapeHtml(ageText(driver.seconds_ago))})
 
                     </div>
 
                 `;
 
             }
+
+
+        } else if (!driver.online || !driver.sharing) {
+
+
+            // OFFLINE / SHARING STOPPED
+
+            locationStatus = `
+
+                <div class="driver-status status-waiting">
+
+                    <i class="fa-solid fa-circle-pause"></i>
+
+                    ${driver.online
+                        ? "Not sharing location"
+                        : "Rider is offline. Location sharing stopped."}
+
+                </div>
+
+            `;
 
 
         } else {
@@ -496,6 +544,29 @@ function updateDriverList(drivers) {
         );
 
     });
+
+}
+
+
+// =====================================================
+// "2 min ago" text for the last GPS update
+// =====================================================
+
+function ageText(seconds) {
+
+    if (seconds === null || seconds === undefined) {
+        return "no update yet";
+    }
+
+    if (seconds < 60) {
+        return "just now";
+    }
+
+    if (seconds < 3600) {
+        return Math.round(seconds / 60) + " min ago";
+    }
+
+    return Math.round(seconds / 3600) + " hr ago";
 
 }
 

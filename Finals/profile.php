@@ -5,19 +5,26 @@ include "includes/auth.php";
 requireLogin();
 $user = loadCurrentUser($conn);
 $message = "";
+$messageIsError = false;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $fullname = trim($_POST["fullname"] ?? "");
     $contact = trim($_POST["contact_number"] ?? "");
     $address = trim($_POST["address"] ?? "");
 
-    $stmt = $conn->prepare("UPDATE users SET fullname = ?, contact_number = ?, address = ? WHERE id = ?");
-    $stmt->bind_param("sssi", $fullname, $contact, $address, $user["id"]);
-    if ($stmt->execute()) {
-        $message = "Profile updated successfully.";
-        $user = loadCurrentUser($conn);
+    // Contact number and address stay required, as they are when registering.
+    if ($fullname === "" || $contact === "" || $address === "") {
+        $message = "Full name, contact number and delivery address are required.";
+        $messageIsError = true;
+    } else {
+        $stmt = $conn->prepare("UPDATE users SET fullname = ?, contact_number = ?, address = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $fullname, $contact, $address, $user["id"]);
+        if ($stmt->execute()) {
+            $message = "Profile updated successfully.";
+            $user = loadCurrentUser($conn);
+        }
+        $stmt->close();
     }
-    $stmt->close();
 }
 
 $pageTitle = "Profile";
@@ -29,7 +36,7 @@ include "includes/header.php";
     <h2>My Profile</h2>
 
     <?php if ($message !== "") { ?>
-        <div class="success-message"><?php echo e($message); ?></div>
+        <div class="<?php echo $messageIsError ? "error-message" : "success-message"; ?>"><?php echo e($message); ?></div>
     <?php } ?>
 
     <div class="card">
@@ -43,12 +50,12 @@ include "includes/header.php";
                 <input type="email" value="<?php echo e($user["email"]); ?>" disabled>
             </div>
             <div class="form-group">
-                <label>Contact Number</label>
-                <input type="text" name="contact_number" value="<?php echo e($user["contact_number"] ?? ""); ?>">
+                <label>Contact Number <span class="req">*</span></label>
+                <input type="text" name="contact_number" value="<?php echo e($user["contact_number"] ?? ""); ?>" required>
             </div>
             <div class="form-group">
-                <label>Delivery Address</label>
-                <textarea name="address" rows="2"><?php echo e($user["address"] ?? ""); ?></textarea>
+                <label>Delivery Address <span class="req">*</span></label>
+                <textarea name="address" rows="2" required><?php echo e($user["address"] ?? ""); ?></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Save Changes</button>
         </form>

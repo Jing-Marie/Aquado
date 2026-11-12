@@ -51,6 +51,32 @@ $user = $user ?? null;
 
 /*
 |--------------------------------------------------------------------------
+| UNREAD NOTIFICATIONS (bell icon)
+|--------------------------------------------------------------------------
+*/
+
+$unreadNotifications = 0;
+
+if (isLoggedIn() && isset($conn)) {
+
+    try {
+
+        require_once __DIR__ . "/../../order_actions.php";
+
+        $unreadNotifications = unreadNotificationCount($conn, currentUserId());
+
+    } catch (Throwable $e) {
+
+        // The notifications table is missing until the database is updated.
+        $unreadNotifications = 0;
+
+    }
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | GET FIRST LETTER FOR PROFILE
 |--------------------------------------------------------------------------
 */
@@ -178,7 +204,7 @@ if ($user && !empty($user["fullname"])) {
 
 
 
-    <nav class="main-nav">
+    <nav class="main-nav <?php echo isLoggedIn() ? "member" : ""; ?>">
 
 
         <?php if (isLoggedIn()) { ?>
@@ -221,7 +247,7 @@ if ($user && !empty($user["fullname"])) {
 
             <a
                 href="register.php"
-                class="nav-link"
+                class="nav-link <?php echo $activeNav === "register" ? "active" : ""; ?>"
             >
                 Register
             </a>
@@ -238,6 +264,21 @@ if ($user && !empty($user["fullname"])) {
 
 
         <?php if (isLoggedIn()) { ?>
+
+
+            <a
+                href="notifications.php"
+                class="nav-link notification-bell"
+                title="Notifications"
+            >
+
+                <i class="fa-solid fa-bell"></i>
+
+                <?php if ($unreadNotifications > 0) { ?>
+                    <span class="bell-badge"><?php echo $unreadNotifications > 9 ? "9+" : (int)$unreadNotifications; ?></span>
+                <?php } ?>
+
+            </a>
 
 
             <a
@@ -303,9 +344,17 @@ if ($user && !empty($user["fullname"])) {
         <?php } else { ?>
 
 
+            <?php
+            // The button of the page you are on is highlighted and underlined
+            // (on phones these buttons are the only Login / Register links).
+            $onLogin = $activeNav === "auth";
+            $onRegister = $activeNav === "register";
+            ?>
+
             <a
                 href="login.php"
-                class="btn btn-outline"
+                class="btn <?php echo $onLogin ? "btn-primary is-current" : "btn-outline"; ?>"
+                <?php echo $onLogin ? 'aria-current="page"' : ""; ?>
             >
                 Login
             </a>
@@ -313,7 +362,8 @@ if ($user && !empty($user["fullname"])) {
 
             <a
                 href="register.php"
-                class="btn btn-primary"
+                class="btn <?php echo $onLogin ? "btn-outline" : "btn-primary"; ?> <?php echo $onRegister ? "is-current" : ""; ?>"
+                <?php echo $onRegister ? 'aria-current="page"' : ""; ?>
             >
                 Register
             </a>

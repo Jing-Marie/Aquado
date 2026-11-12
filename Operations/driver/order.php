@@ -119,6 +119,22 @@ $cssPath = "../style.css";
                         </span>
                     </label>
                 </div>
+                <div class="card">
+                    <h4 style="margin-bottom:12px;color:var(--green-dark);">Proof of Delivery</h4>
+                    <div class="form-group">
+                        <label>Delivery Photo <span class="req">*</span></label>
+                        <input type="file" name="delivery_photo" accept="image/*" capture="environment" required class="proof-input" data-preview="deliveryPhotoPreview">
+                    </div>
+                    <img id="deliveryPhotoPreview" alt="Delivery photo preview" style="display:none;width:100%;border-radius:8px;margin-bottom:8px;">
+                    <div class="form-group">
+                        <label>Empty Containers Collected <span class="req">*</span></label>
+                        <input type="number" name="empty_containers" min="0" max="999" step="1" inputmode="numeric" value="0" required>
+                    </div>
+                    <p style="font-size:13px;color:var(--gray-500);">
+                        <i class="fa-solid fa-clock"></i> The delivery date and time are recorded automatically when you confirm
+                        (now: <strong id="deliveryClock"><?php echo date("M d, Y h:i A"); ?></strong>).
+                    </p>
+                </div>
                 <div class="form-group">
                     <label>Delivery Notes</label>
                     <textarea name="notes" rows="2" placeholder="Any notes about this delivery..."></textarea>
@@ -149,6 +165,23 @@ $cssPath = "../style.css";
                 <?php } ?>
             </div>
 
+            <?php if ($order["delivered_at"] || $order["delivery_photo"]) { ?>
+                <div class="card">
+                    <h4 style="margin-bottom:12px;color:var(--green-dark);">Proof of Delivery</h4>
+                    <?php if ($order["delivered_at"]) { ?>
+                        <div class="receipt-line"><span>Delivered on</span><span><?php echo date("M d, Y h:i A", strtotime($order["delivered_at"])); ?></span></div>
+                    <?php } ?>
+                    <?php if ($order["empty_containers_collected"] !== null) { ?>
+                        <div class="receipt-line"><span>Empty containers collected</span><span><?php echo (int)$order["empty_containers_collected"]; ?></span></div>
+                    <?php } ?>
+                    <?php if ($order["delivery_photo"]) { ?>
+                        <a href="../delivery_proof.php?order_id=<?php echo (int)$order["id"]; ?>" target="_blank">
+                            <img src="../delivery_proof.php?order_id=<?php echo (int)$order["id"]; ?>" alt="Delivery photo" style="width:100%;border-radius:8px;margin-top:12px;">
+                        </a>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+
             <?php if ($order["payment_status"] === "Rejected") { ?>
                 <form method="POST" action="update_status.php" enctype="multipart/form-data">
                     <input type="hidden" name="order_id" value="<?php echo (int)$order["id"]; ?>">
@@ -177,5 +210,16 @@ $cssPath = "../style.css";
 </div>
 
 <script src="js/proof_photo.js?v=<?php echo ASSET_VERSION; ?>"></script>
+<script>
+// Live clock next to "delivery date and time" (the server records the real time).
+const deliveryClock = document.getElementById("deliveryClock");
+if (deliveryClock) {
+    setInterval(function() {
+        deliveryClock.textContent = new Date().toLocaleString([], {
+            month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
+        });
+    }, 30000);
+}
+</script>
 </body>
 </html>

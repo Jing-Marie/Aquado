@@ -1,9 +1,11 @@
 <?php
 include "../connections.php";
 include "../includes/auth.php";
+include "../includes/workflow.php";
 
 requireRole("driver", "../login.php");
 $user = loadCurrentUser($conn);
+$isOnline = isDriverOnline($conn, currentUserId());
 
 $pageTitle = "Account";
 $cssPath = "../style.css";
@@ -33,6 +35,15 @@ $cssPath = "../style.css";
             <p style="color:var(--gray-500);font-size:14px;"><?php echo e($user["email"]); ?></p>
             <p style="color:var(--gray-500);font-size:14px;"><?php echo e($user["contact_number"] ?? ""); ?></p>
         </div>
+        <form method="POST" action="set_status.php" class="online-switch <?php echo $isOnline ? "is-online" : "is-offline"; ?>" style="margin-top:16px;">
+            <input type="hidden" name="online" value="<?php echo $isOnline ? "0" : "1"; ?>">
+            <input type="hidden" name="return" value="account">
+            <div class="online-switch-text">
+                <strong><i class="fa-solid fa-circle"></i> You are <?php echo $isOnline ? "Online" : "Offline"; ?></strong>
+                <span><?php echo $isOnline ? "Location is shared during active deliveries." : "Location sharing is off."; ?></span>
+            </div>
+            <button type="submit" class="btn btn-sm <?php echo $isOnline ? "btn-secondary" : "btn-primary"; ?>"><?php echo $isOnline ? "Go Offline" : "Go Online"; ?></button>
+        </form>
         <!-- Shown on Android Chrome when the app can be installed -->
         <button type="button" class="btn btn-primary btn-block" style="display:none;margin-top:16px;" data-install-app onclick="installAquadoApp()">
             <i class="fa-solid fa-download"></i> Install Aquado Driver App

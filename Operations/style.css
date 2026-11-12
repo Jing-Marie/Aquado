@@ -1489,6 +1489,164 @@ button, input, select, textarea {
         white-space: nowrap;
         border-left: none !important;
     }
+
+    /* ---------- Admin / cashier on phones ---------- */
+
+    /* Sidebar becomes a top bar with a swipeable menu that stays visible */
+    .admin-sidebar {
+        padding: 12px 0 0;
+        position: sticky;
+        top: 0;
+        z-index: 500;
+    }
+
+    .admin-sidebar .logo-area {
+        padding: 0 16px 12px;
+        margin-bottom: 0;
+    }
+
+    .admin-nav {
+        scrollbar-width: none;
+    }
+
+    .admin-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .admin-nav a {
+        padding: 12px 16px;
+        border-bottom: 3px solid transparent;
+    }
+
+    .admin-nav a.active {
+        border-bottom-color: var(--green-light);
+    }
+
+    .admin-main {
+        padding: 20px 16px;
+        min-width: 0;
+    }
+
+    .admin-header-bar {
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .admin-header-bar h2 {
+        font-size: 20px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 16px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 24px;
+    }
+
+    .chart-placeholder {
+        padding: 16px;
+    }
+
+    .chart-bars {
+        gap: 6px;
+    }
+
+    .chart-bar em {
+        font-size: 9px !important;
+    }
+
+    .admin-decor {
+        display: none;
+    }
+
+    /* Tables become one card per row, each value labelled with its column name */
+    .data-table,
+    .data-table tbody,
+    .data-table tr,
+    .data-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table {
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    .data-table thead {
+        display: none;
+    }
+
+    .data-table tr {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 14px;
+        padding: 4px 0;
+    }
+
+    .data-table tr:hover {
+        background: var(--white);
+    }
+
+    .data-table td {
+        padding: 10px 16px;
+        text-align: right;
+        max-width: none !important;
+        overflow-wrap: anywhere;
+    }
+
+    .data-table td::after {
+        content: "";
+        display: block;
+        clear: both;
+    }
+
+    .data-table td:last-child {
+        border-bottom: none;
+    }
+
+    .data-table td[data-label]::before {
+        content: attr(data-label);
+        float: left;
+        margin-right: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        text-align: left;
+        padding-top: 2px;
+    }
+
+    .data-table td form {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    /* Long forms in pop-ups can scroll */
+    .modal-overlay {
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
+    .modal-card {
+        margin: auto;
+    }
 }
 
 
@@ -1539,6 +1697,156 @@ button, input, select, textarea {
 
     #map-status {
         font-size: 12px;
+    }
+
+}
+
+/* =====================================================
+   CANCEL ORDER, NOTIFICATIONS, PROOF OF DELIVERY, ONLINE SWITCH
+   ===================================================== */
+
+.btn-cancel {
+    background: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #EF9A9A;
+}
+
+.btn-cancel:hover {
+    background: #C62828;
+    color: var(--white);
+}
+
+.req {
+    color: #DC2626;
+    font-weight: 700;
+}
+
+.notification-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+
+.notification-item.unread {
+    border-left: 4px solid var(--orange-accent);
+    background: #FFFBF3;
+}
+
+.notification-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--green-mint);
+    color: var(--green-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notification-icon.order_cancelled {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.notification-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.notification-body p {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.notification-time {
+    display: block;
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+}
+
+.notification-body a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-accent);
+}
+
+/* Rider Online / Offline switch */
+.online-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    border-radius: var(--radius);
+    background: var(--white);
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--gray-500);
+}
+
+.online-switch.is-online {
+    border-left-color: #2E7D32;
+}
+
+.online-switch.is-offline {
+    border-left-color: #C62828;
+}
+
+.online-switch-text {
+    min-width: 0;
+}
+
+.online-switch-text strong {
+    display: block;
+    font-size: 15px;
+    color: var(--green-dark);
+}
+
+.online-switch.is-online .online-switch-text strong i {
+    color: #2E7D32;
+}
+
+.online-switch.is-offline .online-switch-text strong i {
+    color: #C62828;
+}
+
+.online-switch-text span {
+    display: block;
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.online-switch .btn {
+    flex-shrink: 0;
+}
+
+/* Admin dashboard rider map */
+.dashboard-map {
+    width: 100%;
+    height: 380px;
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 600px) {
+
+    .dashboard-map {
+        height: 300px;
+    }
+
+    .online-switch {
+        flex-wrap: wrap;
+    }
+
+    .online-switch .btn {
+        width: 100%;
     }
 
 }

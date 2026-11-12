@@ -256,10 +256,23 @@ Roles are `admin`, `cashier`, `driver` and `customer`. Staff sign in at `/Operat
 
 To confirm the database is reached, sign in at `/Operations/` with a wrong password. The message should be "Invalid email or password", not "Database connection failed".
 
+### Updating a site that is already live (database update of 2026-11-12)
+
+The cancel order, notifications, proof of delivery and rider online/offline features need new database columns and one new table. **Run the update on the TiDB database first, then merge to `main` (Vercel redeploys on its own).** If the new code goes live first, pages show database errors until the update is run. The update only adds columns and a table; existing orders and accounts are untouched.
+
+```bash
+mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado < revisions_2026-11-12_cancel_proof_gps.sql
+```
+
+No password at hand? Open the instance's **SQL Editor** in the TiDB Cloud console, choose the `aquado` database, paste the contents of `revisions_2026-11-12_cancel_proof_gps.sql` and run it.
+
+(Run it once. Running it twice fails on "duplicate column", which is harmless.) Delivery photos are stored in the database like the GCash photos, so nothing else is needed on Vercel.
+
 ### Troubleshooting
 
 | Symptom | Fix |
 |---|---|
+| Errors about `notifications`, `cancelled_at`, `delivery_photo` or `is_online` | The 2026-11-12 database update above has not been run yet. |
 | The site shows PHP code | The preset is not Container. Run the `vercel project update` command in step 4. |
 | "Database connection failed" | Check that `DB_PORT` is `4000`, `DB_USER` is `PREFIX.root` and `DB_SSL` is `true`. Redeploy after changing variables. |
 | Connection refused or times out | The TiDB public endpoint is off, or the `0.0.0.0/0` rule is missing. |

@@ -24,10 +24,13 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "locations") {
             u.id AS driver_id,
             u.fullname AS driver_name,
             u.contact_number,
+            u.is_online,
 
             dl.latitude,
             dl.longitude,
-            dl.last_updated
+            dl.is_sharing,
+            dl.last_updated,
+            TIMESTAMPDIFF(SECOND, dl.last_updated, NOW()) AS seconds_ago
 
         FROM orders o
 
@@ -56,22 +59,40 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "locations") {
 
             if (!isset($drivers[$id])) {
 
+                // Location is only shared while the rider is Online and on a delivery.
+                $sharing = (int)$row["is_online"] === 1
+                    && $row["is_sharing"] !== null
+                    && (int)$row["is_sharing"] === 1;
+
+                $secondsAgo = $row["seconds_ago"] !== null
+                    ? max(0, (int)$row["seconds_ago"])
+                    : null;
+
                 $drivers[$id] = [
                     "driver_id" => $id,
                     "driver_name" => $row["driver_name"],
                     "contact_number" => $row["contact_number"],
 
+                    "online" => (int)$row["is_online"] === 1,
+                    "sharing" => $sharing,
+
+                    // No position is sent once sharing has stopped (Offline / finished).
                     "latitude" =>
-                        $row["latitude"] !== null
+                        $sharing && $row["latitude"] !== null
                             ? (float)$row["latitude"]
                             : null,
 
                     "longitude" =>
-                        $row["longitude"] !== null
+                        $sharing && $row["longitude"] !== null
                             ? (float)$row["longitude"]
                             : null,
 
                     "last_updated" => $row["last_updated"],
+
+                    "seconds_ago" => $secondsAgo,
+
+                    // GPS signal temporarily lost: the position is the last known one.
+                    "stale" => $secondsAgo !== null && $secondsAgo > 120,
 
                     "orders" => []
                 ];

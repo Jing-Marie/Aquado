@@ -2,7 +2,7 @@
 -- Aquado database: structure + products and inventory only.
 -- No user accounts, orders or customer data (those stay private).
 -- Import into an empty database named `aquado` (or the host's database).
--- Already includes all revisions up to 2026-11-04.
+-- Already includes all revisions up to 2026-11-12.
 -- --------------------------------------------------------
 /*M!999999\- enable the sandbox mode */ 
 
@@ -62,8 +62,24 @@ CREATE TABLE `driver_locations` (
   `driver_id` int(11) NOT NULL,
   `latitude` decimal(10,7) NOT NULL,
   `longitude` decimal(10,7) NOT NULL,
+  `is_sharing` tinyint(1) NOT NULL DEFAULT 1,
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`driver_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `order_id` int(11) DEFAULT NULL,
+  `type` varchar(30) NOT NULL DEFAULT 'info',
+  `message` varchar(255) NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_unread` (`user_id`,`is_read`),
+  KEY `order_id` (`order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -106,6 +122,12 @@ CREATE TABLE `orders` (
   `driver_id` int(11) DEFAULT NULL,
   `delivery_notes` text DEFAULT NULL,
   `delivery_date` date DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancel_reason` varchar(255) DEFAULT NULL,
+  `delivery_photo` varchar(255) DEFAULT NULL,
+  `empty_containers_collected` int(11) DEFAULT NULL,
+  `delivered_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `order_number` (`order_number`),
@@ -139,6 +161,7 @@ CREATE TABLE `users` (
   `role` enum('customer','driver','admin','cashier') NOT NULL DEFAULT 'customer',
   `contact_number` varchar(50) DEFAULT NULL,
   `address` text DEFAULT NULL,
+  `is_online` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)

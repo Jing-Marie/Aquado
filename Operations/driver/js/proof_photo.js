@@ -1,10 +1,12 @@
 // =====================================================
-// PAYMENT PHOTO PREVIEW AND SIZE CHECK
+// PAYMENT / DELIVERY PHOTO PREVIEW AND SIZE CHECK
 // Vercel rejects request bodies over 4.5 MB before PHP runs, and phone
 // photos are often bigger. Large photos are shrunk in the browser first.
+// Completing a delivery can send two photos at once (GCash payment +
+// delivery photo), so each one is kept well under half of that limit.
 // =====================================================
 
-const PROOF_SKIP_BELOW_BYTES = 3 * 1024 * 1024;
+const PROOF_SKIP_BELOW_BYTES = 1.5 * 1024 * 1024;
 const PROOF_MAX_SIDE_PX = 1600;
 const PROOF_JPEG_QUALITY = 0.8;
 
@@ -32,7 +34,7 @@ function shrinkProofPhoto(file) {
 
             canvas.toBlob(function(blob) {
                 if (blob && blob.size < file.size) {
-                    resolve(new File([blob], "payment-proof.jpg", { type: "image/jpeg" }));
+                    resolve(new File([blob], "photo.jpg", { type: "image/jpeg" }));
                 } else {
                     resolve(file);
                 }
@@ -57,7 +59,11 @@ document.querySelectorAll(".proof-input").forEach(function(input) {
 
     input.addEventListener("change", function() {
 
-        const preview = input.closest("form").querySelector(".proof-preview");
+        // A photo field can name its own preview image (data-preview); otherwise
+        // the first preview in its form is used.
+        const preview = input.dataset.preview
+            ? document.getElementById(input.dataset.preview)
+            : input.closest("form").querySelector(".proof-preview");
 
         if (!input.files || !input.files[0]) {
             preview.style.display = "none";

@@ -123,6 +123,16 @@ async function loadDriverLocation() {
             return;
         }
 
+        // The rider went Offline or finished: sharing has stopped, so the marker goes away.
+        if (data.sharing === false) {
+
+            removeDriverMarker();
+
+            setMapStatus("The driver's location is not being shared right now (the rider is offline).");
+
+            return;
+        }
+
         if (!data.location) {
 
             setMapStatus("Waiting for the driver's location...");
@@ -135,20 +145,34 @@ async function loadDriverLocation() {
 
         const lng = parseFloat(data.location.longitude);
 
+        const stale = data.location.stale === true;
+
+        // GPS signal lost: the marker stays where the driver was last seen.
+        const staleNote = stale
+            ? " • GPS signal lost, showing the last known location"
+            : "";
+
         if (driverMarker === null) {
 
             driverMarker = L.marker([lat, lng])
                 .addTo(trackingMap)
                 .bindPopup(
                     "<strong>Driver</strong><br>" +
-                    "Current Location"
+                    (stale ? "Last known location" : "Current Location")
                 );
 
         } else {
 
             driverMarker.setLatLng([lat, lng]);
 
+            driverMarker.setPopupContent(
+                "<strong>Driver</strong><br>" +
+                (stale ? "Last known location" : "Current Location")
+            );
+
         }
+
+        driverMarker.setOpacity(stale ? 0.55 : 1);
 
 
         if (customerLatitude === null) {
@@ -158,19 +182,46 @@ async function loadDriverLocation() {
             setMapStatus(
                 "Driver location updated " +
                 formatTime(data.location.last_updated) +
+                staleNote +
                 " (your address could not be found on the map)"
             );
 
             return;
         }
 
-        calculateRoute(lng, lat, customerLongitude, customerLatitude, data.location.last_updated);
+        calculateRoute(lng, lat, customerLongitude, customerLatitude, data.location.last_updated, staleNote);
 
     } catch (error) {
 
         console.error("Driver location error:", error);
 
-        setMapStatus("Unable to load driver location.");
+        // Keep the last marker on the map when the connection drops for a moment.
+        setMapStatus(
+            driverMarker !== null
+                ? "Connection problem. Showing the driver's last known location."
+                : "Unable to load driver location."
+        );
+
+    }
+
+}
+
+
+function removeDriverMarker() {
+
+    if (driverMarker !== null) {
+
+        trackingMap.removeLayer(driverMarker);
+
+        driverMarker = null;
+
+    }
+
+    if (routeLine !== null) {
+
+        trackingMap.removeLayer(routeLine);
+
+        routeLine = null;
 
     }
 
@@ -181,7 +232,9 @@ async function loadDriverLocation() {
 // CALCULATE ROUTE
 // =====================================================
 
-async function calculateRoute(driverLng, driverLat, customerLng, customerLat, lastUpdated) {
+async function calculateRoute(driverLng, driverLat, customerLng, customerLat, lastUpdated, staleNote) {
+
+    staleNote = staleNote || "";
 
     try {
 
@@ -197,7 +250,7 @@ async function calculateRoute(driverLng, driverLat, customerLng, customerLat, la
 
         if (data.code !== "Ok") {
 
-            setMapStatus("Driver location found, but route could not be calculated.");
+            setMapStatus("Driver location found, but route could not be calculated." + staleNote);
 
             return;
         }
@@ -231,7 +284,8 @@ async function calculateRoute(driverLng, driverLat, customerLng, customerLat, la
         setMapStatus(
             "Driver is approximately " + distanceKm + " km away" +
             " • Estimated " + durationMinutes + " min" +
-            " • Updated " + formatTime(lastUpdated)
+            " • Updated " + formatTime(lastUpdated) +
+            staleNote
         );
 
     } catch (error) {

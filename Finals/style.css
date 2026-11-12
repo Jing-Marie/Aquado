@@ -1464,12 +1464,121 @@ button, input, select, textarea {
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
+    /* Header: logo + icons on top, menu as a swipeable second row */
+    .aquado-header {
+        height: auto;
+        min-height: 64px;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+
     .main-nav {
         display: none;
     }
 
+    .main-nav.member {
+        display: flex;
+        order: 3;
+        width: 100%;
+        gap: 20px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .main-nav.member::-webkit-scrollbar {
+        display: none;
+    }
+
+    .main-nav .nav-link {
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    .hierarchy-bar {
+        padding: 8px 16px;
+        flex-wrap: wrap;
+    }
+
+    /* Page spacing */
+    .hero-section {
+        padding: 56px 16px;
+    }
+
     .hero-section h2 {
         font-size: 28px;
+    }
+
+    .hero-section p {
+        font-size: 16px;
+    }
+
+    .features-section,
+    .catalog-page,
+    .content-page {
+        padding: 28px 16px;
+    }
+
+    .auth-page,
+    .onboarding-page {
+        min-height: 0;
+        padding: 24px 16px;
+    }
+
+    .auth-card,
+    .onboarding-card {
+        padding: 28px 20px;
+    }
+
+    .content-page h2,
+    .catalog-header h2,
+    .section-title {
+        font-size: 22px;
+    }
+
+    .card,
+    .order-card {
+        padding: 18px;
+    }
+
+    .receipt-card {
+        padding: 24px 18px;
+    }
+
+    /* Tracking steps stacked vertically */
+    .tracking-timeline {
+        flex-direction: column;
+        gap: 14px;
+        margin: 16px 0;
+    }
+
+    .tracking-timeline::before {
+        top: 16px;
+        bottom: 16px;
+        left: 15px;
+        right: auto;
+        width: 3px;
+        height: auto;
+    }
+
+    .tracking-step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+    }
+
+    .tracking-step .step-dot {
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .tracking-step span {
+        font-size: 14px;
+    }
+
+    .site-footer {
+        padding: 32px 16px 16px;
     }
 
     .admin-layout {
@@ -1489,4 +1598,171 @@ button, input, select, textarea {
         white-space: nowrap;
         border-left: none !important;
     }
+}
+
+@media (max-width: 480px) {
+    .logo-area {
+        gap: 8px;
+    }
+
+    .logo-img {
+        width: 36px;
+        height: 36px;
+    }
+
+    .logo-text h1 {
+        font-size: 18px;
+    }
+
+    .logo-text span {
+        display: none;
+    }
+
+    .header-actions {
+        gap: 8px;
+    }
+
+    .header-actions .btn {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+
+    .payment-options {
+        flex-direction: column;
+    }
+}
+
+/* Long values (addresses) wrap neatly on the right side of receipt lines */
+.receipt-line {
+    gap: 12px;
+}
+
+.receipt-line span:last-child {
+    text-align: right;
+}
+
+
+/* =====================================================
+   CANCEL ORDER, NOTIFICATIONS, REQUIRED FIELDS
+   ===================================================== */
+
+.btn-cancel {
+    background: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #EF9A9A;
+}
+
+.btn-cancel:hover {
+    background: #C62828;
+    color: var(--white);
+}
+
+.cancelled-card {
+    border-left: 5px solid #C62828;
+}
+
+.cancelled-card h3 {
+    color: #C62828;
+    margin-bottom: 8px;
+}
+
+.cancelled-card p {
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+.notification-bell {
+    position: relative;
+    font-size: 18px;
+}
+
+.bell-badge {
+    position: absolute;
+    top: -2px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    background: var(--orange-accent);
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.notification-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+
+.notification-item.unread {
+    border-left: 4px solid var(--orange-accent);
+    background: #FFFBF3;
+}
+
+.notification-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--green-mint);
+    color: var(--green-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notification-icon.order_cancelled {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.notification-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.notification-body p {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.notification-time {
+    display: block;
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+}
+
+.notification-body a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-accent);
+}
+
+/* Red asterisk on required fields */
+.req {
+    color: #DC2626;
+    font-weight: 700;
+}
+
+/* Current page in the header's Login / Register buttons: underlined */
+.header-actions .btn.is-current {
+    position: relative;
+}
+
+.header-actions .btn.is-current::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: -9px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--white);
 }

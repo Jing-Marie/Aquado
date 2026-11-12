@@ -47,6 +47,8 @@ $rejected->execute();
 $rejectedPayments = $rejected->get_result()->fetch_all(MYSQLI_ASSOC);
 $rejected->close();
 
+$isOnline = isDriverOnline($conn, $driverId);
+
 $pageTitle = "Driver Dashboard";
 $cssPath = "../style.css";
 ?>
@@ -76,6 +78,23 @@ $cssPath = "../style.css";
     </div>
 
     <div class="driver-content">
+        <!-- ONLINE / OFFLINE: going Offline stops sharing the GPS location -->
+        <form method="POST" action="set_status.php" class="online-switch <?php echo $isOnline ? "is-online" : "is-offline"; ?>" id="onlineForm">
+            <input type="hidden" name="online" value="<?php echo $isOnline ? "0" : "1"; ?>">
+            <input type="hidden" name="return" value="index">
+            <div class="online-switch-text">
+                <strong><i class="fa-solid fa-circle"></i> You are <?php echo $isOnline ? "Online" : "Offline"; ?></strong>
+                <span>
+                    <?php if ($isOnline) { ?>
+                        Your location is shared with customers while you have an active delivery.
+                    <?php } else { ?>
+                        Location sharing is off. Go online to share your location again.
+                    <?php } ?>
+                </span>
+            </div>
+            <button type="submit" class="btn btn-sm <?php echo $isOnline ? "btn-secondary" : "btn-primary"; ?>"><?php echo $isOnline ? "Go Offline" : "Go Online"; ?></button>
+        </form>
+
         <h3>Daily Assignments</h3>
 
         <?php if (isset($_GET["error"])) { ?>
@@ -149,9 +168,19 @@ $cssPath = "../style.css";
     </nav>
 </div>
 
-<?php if ($result->num_rows > 0) { ?>
+<?php if ($result->num_rows > 0 && $isOnline) { ?>
     <script src="js/share_location.js?v=<?php echo ASSET_VERSION; ?>"></script>
     <script>startSharingLocation();</script>
+<?php } ?>
+<?php if ($isOnline && $result->num_rows > 0) { ?>
+<script>
+// Warn before going offline in the middle of a delivery.
+document.getElementById("onlineForm").addEventListener("submit", function(event) {
+    if (!confirm("You still have active deliveries. If you go offline, customers can no longer see your location. Go offline?")) {
+        event.preventDefault();
+    }
+});
+</script>
 <?php } ?>
 </body>
 </html>

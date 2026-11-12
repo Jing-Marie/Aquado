@@ -1,9 +1,40 @@
 // =====================================================
 // SHARE DRIVER LOCATION
-// Sends the driver's GPS position every 30 seconds so the
-// customer and the station can follow active deliveries.
-// onPosition(position, errorMessage) is optional.
+// Sends the driver's GPS position every 30 seconds while the rider is
+// Online and on an active delivery, so the customer and the station can
+// follow it. The server tells us to stop (response.stop) when the rider goes
+// Offline or has no active delivery left; sharing then stops for good.
+//
+// If the GPS signal or the connection drops for a moment, nothing is
+// overwritten: the customer and admin keep seeing the last saved position
+// (marked as "last known") until a new one arrives.
+//
+// onPosition(position, errorMessage, stopped) is optional.
 // =====================================================
+
+let locationTimer = null;
+
+let locationStopped = false;
+
+
+function stopSharingLocation(onPosition, message) {
+
+    locationStopped = true;
+
+    if (locationTimer !== null) {
+
+        clearInterval(locationTimer);
+
+        locationTimer = null;
+
+    }
+
+    if (onPosition) {
+        onPosition(null, message || "Location sharing is off.", true);
+    }
+
+}
+
 
 function startSharingLocation(onPosition) {
 
@@ -16,12 +47,22 @@ function startSharingLocation(onPosition) {
         return;
     }
 
+    locationStopped = false;
+
 
     function updateLocation() {
+
+        if (locationStopped) {
+            return;
+        }
 
         navigator.geolocation.getCurrentPosition(
 
             function(position) {
+
+                if (locationStopped) {
+                    return;
+                }
 
                 const latitude = position.coords.latitude;
 
@@ -45,6 +86,14 @@ function startSharingLocation(onPosition) {
                 .then(response => response.json())
                 .then(data => {
 
+                    // Offline or no active delivery: stop sharing.
+                    if (data.stop) {
+
+                        stopSharingLocation(onPosition, data.message);
+
+                        return;
+                    }
+
                     if (!data.success) {
                         console.error("Location was not saved:", data.message);
                     }
@@ -52,6 +101,7 @@ function startSharingLocation(onPosition) {
                 })
                 .catch(error => {
 
+                    // Connection problem: the last saved position stays on the maps.
                     console.error("Save location error:", error);
 
                 });
@@ -65,6 +115,7 @@ function startSharingLocation(onPosition) {
 
             function(error) {
 
+                // GPS signal lost: keep trying; the last saved position stays visible.
                 console.error("Location error:", error);
 
                 if (onPosition) {
@@ -76,9 +127,9 @@ function startSharingLocation(onPosition) {
             {
                 enableHighAccuracy: true,
 
-                timeout: 10000,
+                timeout: 15000,
 
-                maximumAge: 0
+                maximumAge: 10000
             }
 
         );
@@ -88,6 +139,9 @@ function startSharingLocation(onPosition) {
 
     updateLocation();
 
-    setInterval(updateLocation, 30000);
+    locationTimer = setInterval(updateLocation, 30000);
+
+    // Send a fresh position as soon as the connection comes back.
+    window.addEventListener("online", updateLocation);
 
 }
