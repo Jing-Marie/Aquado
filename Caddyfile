@@ -9,7 +9,7 @@
     rewrite /sitemap.xml /sitemap.php
 
     # Setup files, database scripts and payment photos are never served
-    @private path_regexp ^/(config|db|payment_proofs)\.php$|^/(database|uploads)/|\.(sql|md)$
+    @private path_regexp ^/(config|db|payment_proofs|order_actions)\.php$|^/(database|uploads)/|\.(sql|md)$
     respond @private 403
 
     # Static files (CSS, JS, images, fonts) may be kept for a day. Their links

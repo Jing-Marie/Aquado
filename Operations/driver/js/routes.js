@@ -229,10 +229,15 @@ async function calculateRoute() {
 // DRIVER LOCATION (also saved for the customer's map)
 // =====================================================
 
-function onDriverPosition(position, errorMessage) {
+function onDriverPosition(position, errorMessage, stopped) {
 
     if (!position) {
-        locationError = errorMessage.replace(/\.?$/, ".") + " Allow location access so customers can track you.";
+
+        // Sharing was switched off (Offline / no active delivery): nothing to allow.
+        locationError = stopped
+            ? errorMessage
+            : errorMessage.replace(/\.?$/, ".") + " Allow location access so customers can track you.";
+
         calculateRoute();
         return;
     }
@@ -279,4 +284,13 @@ function escapeHtml(text) {
 
 findStops();
 
-startSharingLocation(onDriverPosition);
+// An Offline rider does not share their location.
+if (typeof DRIVER_ONLINE !== "undefined" && !DRIVER_ONLINE) {
+
+    locationError = "You are offline. Location sharing is off.";
+
+} else {
+
+    startSharingLocation(onDriverPosition);
+
+}

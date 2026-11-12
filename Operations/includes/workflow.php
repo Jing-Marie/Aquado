@@ -18,6 +18,8 @@
 |
 */
 
+require_once __DIR__ . "/../../order_actions.php";
+
 const ACTIVE_DRIVER_STATUSES = [
     "Assigned",
     "Accepted",
@@ -159,39 +161,129 @@ function applyDriverAction($conn, $orderId, $driverId, $action) {
 |--------------------------------------------------------------------------
 */
 
-function completeDelivery($conn, $orderId, $driverId, $notes, $proofFile) {
+function completeDelivery($conn, $orderId, $driverId, $notes, $proofFile, $deliveryPhoto, $emptyContainers) {
 
+    // Proof of delivery: photo, empty containers collected, and the exact date and time.
     $stmt = $conn->prepare("
         UPDATE orders
         SET status = 'Delivered',
             payment_status = 'For Verification',
             payment_proof = ?,
             payment_collected_at = NOW(),
-            delivery_notes = ?
+            delivery_notes = ?,
+            delivery_photo = ?,
+            empty_containers_collected = ?,
+            delivered_at = NOW()
         WHERE id = ? AND driver_id = ? AND status = 'Out for Delivery'
     ");
 
-    $stmt->bind_param("ssii", $proofFile, $notes, $orderId, $driverId);
+    $stmt->bind_param("sssiii", $proofFile, $notes, $deliveryPhoto, $emptyContainers, $orderId, $driverId);
     $stmt->execute();
     $changed = $stmt->affected_rows === 1;
     $stmt->close();
 
     if ($changed) {
 
-        $order = $conn->query("SELECT payment_method, total FROM orders WHERE id = " . (int)$orderId)->fetch_assoc();
+        $order = $conn->query("SELECT payment_method, total, delivered_at FROM orders WHERE id = " . (int)$orderId)->fetch_assoc();
+
+        // The delivery evidence is saved in the order history (delivery_tracking).
+        $evidence = " Delivered on " . date("M d, Y h:i A", strtotime($order["delivered_at"]))
+            . ". Delivery photo uploaded. "
+            . $emptyContainers . " empty container(s) collected.";
 
         logOrderStatus(
             $conn,
             $orderId,
-            $order["payment_method"] === "GCash"
-                ? "Delivery completed. GCash payment of " . formatPeso($order["total"]) . " received by the rider (photo uploaded), awaiting cashier confirmation"
-                : "Delivery completed. Cash payment of " . formatPeso($order["total"]) . " collected by the rider, awaiting cashier confirmation",
+            ($order["payment_method"] === "GCash"
+                ? "Delivery completed. GCash payment of " . formatPeso($order["total"]) . " received by the rider (photo uploaded), awaiting cashier confirmation."
+                : "Delivery completed. Cash payment of " . formatPeso($order["total"]) . " collected by the rider, awaiting cashier confirmation.")
+                . $evidence,
             $driverId
         );
+
+        // Last delivery done: the rider's location is no longer shared.
+        stopSharingIfIdle($conn, $driverId);
 
     }
 
     return $changed;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| RIDER LOCATION SHARING
+|--------------------------------------------------------------------------
+|
+| The rider's GPS position is only shared while the rider is Online and has
+| an active delivery. Going Offline, or finishing the last delivery, stops it.
+|
+*/
+
+function driverActiveOrderCount($conn, $driverId) {
+
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) AS cnt
+        FROM orders
+        WHERE driver_id = ? AND status IN ('" . implode("','", ACTIVE_DRIVER_STATUSES) . "')
+    ");
+
+    $stmt->bind_param("i", $driverId);
+    $stmt->execute();
+    $count = (int)$stmt->get_result()->fetch_assoc()["cnt"];
+    $stmt->close();
+
+    return $count;
+
+}
+
+
+function stopSharingLocation($conn, $driverId) {
+
+    $stmt = $conn->prepare("UPDATE driver_locations SET is_sharing = 0 WHERE driver_id = ?");
+    $stmt->bind_param("i", $driverId);
+    $stmt->execute();
+    $stmt->close();
+
+}
+
+
+function stopSharingIfIdle($conn, $driverId) {
+
+    if (driverActiveOrderCount($conn, $driverId) === 0) {
+        stopSharingLocation($conn, $driverId);
+    }
+
+}
+
+
+function isDriverOnline($conn, $driverId) {
+
+    $stmt = $conn->prepare("SELECT is_online FROM users WHERE id = ?");
+    $stmt->bind_param("i", $driverId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $row && (int)$row["is_online"] === 1;
+
+}
+
+
+function setDriverOnline($conn, $driverId, $online) {
+
+    $online = $online ? 1 : 0;
+
+    $stmt = $conn->prepare("UPDATE users SET is_online = ? WHERE id = ? AND role = 'driver'");
+    $stmt->bind_param("ii", $online, $driverId);
+    $stmt->execute();
+    $stmt->close();
+
+    // Going Offline stops the location sharing right away.
+    if (!$online) {
+        stopSharingLocation($conn, $driverId);
+    }
 
 }
 
@@ -302,6 +394,14 @@ function confirmOrder($conn, $orderId, $staffId) {
     }
 
     return $changed;
+
+}
+
+
+// Cancelling is allowed only while the order is Pending (see order_actions.php).
+function cancelOrder($conn, $orderId, $staffId, $reason) {
+
+    return cancelPendingOrder($conn, $orderId, $staffId, currentRole(), $reason);
 
 }
 

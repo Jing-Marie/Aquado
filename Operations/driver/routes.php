@@ -1,6 +1,7 @@
 <?php
 include "../connections.php";
 include "../includes/auth.php";
+include "../includes/workflow.php";
 
 requireRole("driver", "../login.php");
 $user = loadCurrentUser($conn);
@@ -13,6 +14,8 @@ $activeOrder->execute();
 $stops = $activeOrder->get_result()->fetch_all(MYSQLI_ASSOC);
 $activeOrder->close();
 $current = $stops[0] ?? null;
+
+$isOnline = isDriverOnline($conn, $driverId);
 
 $cssPath = "../style.css";
 ?>
@@ -73,7 +76,8 @@ $cssPath = "../style.css";
 
 <?php if ($current) { ?>
 <script>
-const ROUTE_STOPS = <?php echo json_encode(array_map(function ($stop) {
+const DRIVER_ONLINE = <?php echo $isOnline ? "true" : "false"; ?>;
+const ROUTE_STOPS =<?php echo json_encode(array_map(function ($stop) {
     return [
         "name" => $stop["customer_name"],
         "address" => $stop["customer_address"],

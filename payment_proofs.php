@@ -26,8 +26,26 @@ const PAYMENT_PROOF_TYPES = [
  */
 function savePaymentProof($conn, $file, &$error) {
 
+    return storeProofPhoto($conn, $file, "Please upload a photo of the customer's GCash payment.", $error);
+
+}
+
+
+/*
+ * Saves the rider's proof-of-delivery photo. It is kept in the same table
+ * as the payment photos; orders.delivery_photo keeps its name.
+ */
+function saveDeliveryPhoto($conn, $file, &$error) {
+
+    return storeProofPhoto($conn, $file, "Please take or upload a delivery photo as proof of delivery.", $error);
+
+}
+
+
+function storeProofPhoto($conn, $file, $missingMessage, &$error) {
+
     if (!$file || $file["error"] === UPLOAD_ERR_NO_FILE) {
-        $error = "Please upload a photo of the customer's GCash payment.";
+        $error = $missingMessage;
         return null;
     }
 

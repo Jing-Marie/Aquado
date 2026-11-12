@@ -210,3 +210,22 @@
     min-width: 0;
     width: 100%;
 }
+
+/* Phones: sidebar on top (as on the other admin pages) */
+@media (max-width: 768px) {
+
+    .admin-app {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        min-height: 0;
+    }
+
+    .admin-main {
+        padding: 0;
+    }
+
+}

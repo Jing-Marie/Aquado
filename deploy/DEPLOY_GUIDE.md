@@ -192,10 +192,21 @@ Staff log in at `/Operations/`. Customers register on the site.
 - Refresh a logged-in page a few times. You should stay logged in.
 - `/robots.txt` and `/sitemap.xml` return text. `/config.php` is blocked.
 
+### Updating a site that is already live (database update of 2026-11-12)
+
+The cancel order, notifications, proof of delivery and rider online/offline features need new database columns and one new table. **Run the update on the TiDB database first, then merge to `main` (Vercel redeploys on its own).** If the new code goes live first, pages show database errors until the update is run. The update only adds columns and a table; existing orders and accounts are untouched.
+
+```bash
+mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado < revisions_2026-11-12_cancel_proof_gps.sql
+```
+
+(Run it once. Running it twice fails on "duplicate column", which is harmless.) Delivery photos are stored in the database like the GCash photos, so nothing else is needed on Vercel.
+
 ### Troubleshooting
 
 | Symptom | Fix |
 |---|---|
+| Errors about `notifications`, `cancelled_at`, `delivery_photo` or `is_online` | The 2026-11-12 database update above has not been run yet. |
 | "Database connection failed" | Check that `DB_PORT` is `4000`, `DB_USER` includes the prefix and `DB_SSL` is `true`. Then redeploy, because variable changes need a new deployment. |
 | Connection refused or timeout | The public endpoint is off, or the `0.0.0.0/0` rule is missing. |
 | Stops accepting connections partway through a month | The free monthly quota is used up. It resets each month, or you can raise the quota in the TiDB console. |

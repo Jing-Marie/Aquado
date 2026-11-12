@@ -51,6 +51,10 @@ if ($trackOrder) {
     if ($currentIdx === false) $currentIdx = 0;
 }
 
+// Result of a cancel request (set by cancel_order.php).
+$notice = $_SESSION["order_notice"] ?? null;
+unset($_SESSION["order_notice"]);
+
 $pageTitle = "Orders & Receipts";
 $activeNav = "orders";
 $breadcrumb = "Order History & E-Receipts";
@@ -60,6 +64,10 @@ include "includes/header.php";
 
 <section class="content-page">
     <h2>Order History & E-Receipts</h2>
+
+    <?php if ($notice) { ?>
+        <div class="<?php echo $notice[0] === "success" ? "success-message" : "error-message"; ?>"><?php echo e($notice[1]); ?></div>
+    <?php } ?>
 
     <div class="tab-nav">
         <a href="order_history.php?tab=orders" class="tab-btn <?php echo $tab === "orders" ? "active" : ""; ?>">
@@ -84,8 +92,28 @@ include "includes/header.php";
                     <span class="status-badge <?php echo statusBadgeClass($trackOrder["status"]); ?>"><?php echo e($trackOrder["status"]); ?></span>
                 </div>
                 <p style="font-size:14px;color:var(--gray-500);">Deliver to: <?php echo e($trackOrder["customer_address"]); ?></p>
+                <?php if ($trackOrder["status"] === "Pending") { ?>
+                    <form method="POST" action="cancel_order.php" class="cancel-form" style="margin-top:14px;">
+                        <input type="hidden" name="order" value="<?php echo e($trackOrder["order_number"]); ?>">
+                        <input type="hidden" name="return" value="tracking">
+                        <button type="submit" class="btn btn-sm btn-cancel"><i class="fa-solid fa-ban"></i> Cancel Order</button>
+                    </form>
+                <?php } ?>
             </div>
 
+            <?php if ($trackOrder["status"] === "Cancelled") { ?>
+                <div class="card cancelled-card">
+                    <h3><i class="fa-solid fa-ban"></i> Order Cancelled</h3>
+                    <p>
+                        <?php if ($trackOrder["cancelled_at"]) { ?>
+                            Cancelled on <?php echo date("M d, Y h:i A", strtotime($trackOrder["cancelled_at"])); ?>.
+                        <?php } ?>
+                        <?php if ($trackOrder["cancel_reason"]) { ?>
+                            Reason: <?php echo e($trackOrder["cancel_reason"]); ?>
+                        <?php } ?>
+                    </p>
+                </div>
+            <?php } else { ?>
             <div class="card">
                 <h3 style="color:var(--green-dark);margin-bottom:16px;">Tracking Status</h3>
                 <div class="tracking-timeline">
@@ -99,6 +127,25 @@ include "includes/header.php";
                     <?php } ?>
                 </div>
             </div>
+            <?php } ?>
+
+            <?php if ($trackOrder["status"] === "Delivered" && ($trackOrder["delivered_at"] || $trackOrder["delivery_photo"])) { ?>
+                <!-- PROOF OF DELIVERY -->
+                <div class="card">
+                    <h3 style="color:var(--green-dark);margin-bottom:12px;"><i class="fa-solid fa-camera"></i> Proof of Delivery</h3>
+                    <?php if ($trackOrder["delivered_at"]) { ?>
+                        <div class="receipt-line"><span>Delivered on</span><span><?php echo date("M d, Y h:i A", strtotime($trackOrder["delivered_at"])); ?></span></div>
+                    <?php } ?>
+                    <?php if ($trackOrder["empty_containers_collected"] !== null) { ?>
+                        <div class="receipt-line"><span>Empty containers collected</span><span><?php echo (int)$trackOrder["empty_containers_collected"]; ?></span></div>
+                    <?php } ?>
+                    <?php if ($trackOrder["delivery_photo"]) { ?>
+                        <a href="delivery_proof.php?order=<?php echo urlencode($trackOrder["order_number"]); ?>" target="_blank">
+                            <img src="delivery_proof.php?order=<?php echo urlencode($trackOrder["order_number"]); ?>" alt="Delivery photo" style="width:100%;max-width:360px;border-radius:8px;display:block;margin-top:12px;">
+                        </a>
+                    <?php } ?>
+                </div>
+            <?php } ?>
 
             <?php if ($showLiveMap) { ?>
                 <!-- LIVE DRIVER MAP -->
@@ -158,12 +205,30 @@ include "includes/header.php";
                     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
                         <a href="receipt.php?order=<?php echo urlencode($order["order_number"]); ?>" class="btn btn-sm btn-secondary">View E-Receipt</a>
                         <a href="order_history.php?tab=tracking&order=<?php echo urlencode($order["order_number"]); ?>" class="btn btn-sm btn-primary">Track Status</a>
+                        <?php if ($order["status"] === "Pending") { ?>
+                            <form method="POST" action="cancel_order.php" class="cancel-form" style="display:inline;">
+                                <input type="hidden" name="order" value="<?php echo e($order["order_number"]); ?>">
+                                <input type="hidden" name="return" value="orders">
+                                <button type="submit" class="btn btn-sm btn-cancel"><i class="fa-solid fa-ban"></i> Cancel Order</button>
+                            </form>
+                        <?php } ?>
                     </div>
                 </div>
             <?php } ?>
         <?php } ?>
     <?php } ?>
 </section>
+
+<script>
+// Ask before cancelling an order.
+document.querySelectorAll(".cancel-form").forEach(function(form) {
+    form.addEventListener("submit", function(event) {
+        if (!confirm("Cancel this order? This cannot be undone.")) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
 
 <?php if ($showLiveMap) { ?>
 <script>

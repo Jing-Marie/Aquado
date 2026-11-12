@@ -25,9 +25,15 @@ Containers / PET bottles skip Picked Up and Ready for Delivery.
 
 Payments: Unpaid → For Verification (rider collected cash, or uploaded a GCash payment photo) → Paid (cashier confirmed) or Rejected (rider uploads a new photo).
 
+Cancelling: a customer or staff (admin / cashier) can cancel an order **only while it is Pending**. The order becomes Cancelled, the customer, admin and cashier are notified (bell icon / Notifications page), and anything past Pending is refused.
+
+Proof of delivery: to finish a delivery the rider uploads a delivery photo, enters the empty containers collected, and the date/time is recorded automatically. It is saved on the order and in its history, shown to the customer on the tracking page, and admin / cashier review it with **View Proof** in Order Management.
+
+Rider location: shared only while the rider is **Online** and has an active delivery. Going Offline, logging out or finishing the last delivery stops it. If the GPS signal drops, customers and admin keep seeing the last known position (faded and labelled) until a new one arrives.
+
 ## Database changes
 
-`database/aquado_schema.sql` already includes everything. The `revisions_*.sql` files are the step-by-step changes for upgrading an older copy of the database.
+`database/aquado_schema.sql` already includes everything. The `revisions_*.sql` files are the step-by-step changes for upgrading an older copy of the database. After pulling this version run `revisions_2026-11-12_cancel_proof_gps.sql` once on your existing database (cancel / proof of delivery / notifications / rider online status) **before** deploying.
 
 ## Deploying
 

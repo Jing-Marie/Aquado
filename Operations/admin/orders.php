@@ -15,6 +15,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ? "Order accepted."
             : "Order could not be accepted (it is no longer pending).";
     }
+    if (isset($_POST["cancel_order"])) {
+        $id = (int)$_POST["order_id"];
+        $message = cancelOrder($conn, $id, $staffId, trim($_POST["cancel_reason"] ?? ""))
+            ? "Order cancelled. The customer and the staff were notified."
+            : "Order could not be cancelled. Only orders that are still pending can be cancelled.";
+    }
     if (isset($_POST["dispatch_order"])) {
         $id = (int)$_POST["order_id"];
         $driverId = (int)$_POST["driver_id"];
@@ -64,13 +70,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 $orders = $conn->query("SELECT o.*, u.fullname as driver_name FROM orders o LEFT JOIN users u ON o.driver_id = u.id ORDER BY o.created_at DESC");
 $drivers = $conn->query("
-    SELECT u.id, u.fullname, COUNT(o.id) AS active_orders
+    SELECT u.id, u.fullname, u.is_online, COUNT(o.id) AS active_orders
     FROM users u
     LEFT JOIN orders o
         ON o.driver_id = u.id
        AND o.status IN ('" . implode("','", ACTIVE_DRIVER_STATUSES) . "')
     WHERE u.role = 'driver'
-    GROUP BY u.id, u.fullname
+    GROUP BY u.id, u.fullname, u.is_online
     ORDER BY u.fullname
 ");
 $products = $conn->query("SELECT * FROM products WHERE is_active = 1");
@@ -126,7 +132,15 @@ $cssPath = "../style.css";
                         <td style="max-width:200px;font-size:13px;"><?php echo e($order["customer_address"]); ?></td>
                         <td><?php echo formatPeso($order["total"]); ?></td>
                         <td><?php echo e($order["payment_method"]); ?><br><small style="color:var(--gray-500);"><?php echo e($order["payment_status"]); ?></small></td>
-                        <td><span class="status-badge <?php echo statusBadgeClass($order["status"]); ?>"><?php echo e($order["status"]); ?></span></td>
+                        <td>
+                            <span class="status-badge <?php echo statusBadgeClass($order["status"]); ?>"><?php echo e($order["status"]); ?></span>
+                            <?php if ($order["status"] === "Cancelled") { ?>
+                                <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">
+                                    <?php echo e($order["cancel_reason"] ?? ""); ?>
+                                    <?php if ($order["cancelled_at"]) { ?><br><?php echo date("M d, h:i A", strtotime($order["cancelled_at"])); ?><?php } ?>
+                                </div>
+                            <?php } ?>
+                        </td>
                         <td><?php echo e($order["driver_name"] ?? "—"); ?></td>
                         <td>
                             <div class="table-actions">
@@ -135,6 +149,24 @@ $cssPath = "../style.css";
                                         <input type="hidden" name="order_id" value="<?php echo (int)$order["id"]; ?>">
                                         <button type="submit" name="confirm_order" class="btn btn-sm btn-primary">Accept Order</button>
                                     </form>
+                                    <form method="POST" class="cancel-order-form" style="display:inline-flex;gap:4px;align-items:center;">
+                                        <input type="hidden" name="order_id" value="<?php echo (int)$order["id"]; ?>">
+                                        <input type="text" name="cancel_reason" placeholder="Reason (optional)" maxlength="200" style="padding:4px 8px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;width:130px;">
+                                        <button type="submit" name="cancel_order" class="btn btn-sm btn-cancel"><i class="fa-solid fa-ban"></i> Cancel Order</button>
+                                    </form>
+                                <?php } ?>
+                                <?php if ($order["status"] === "Delivered") { ?>
+                                    <button type="button" class="btn btn-sm btn-secondary view-proof"
+                                        data-order="<?php echo e($order["order_number"]); ?>"
+                                        data-customer="<?php echo e($order["customer_name"]); ?>"
+                                        data-driver="<?php echo e($order["driver_name"] ?? "—"); ?>"
+                                        data-delivered="<?php echo $order["delivered_at"] ? e(date("M d, Y h:i A", strtotime($order["delivered_at"]))) : ""; ?>"
+                                        data-empties="<?php echo $order["empty_containers_collected"] === null ? "" : (int)$order["empty_containers_collected"]; ?>"
+                                        data-notes="<?php echo e($order["delivery_notes"] ?? ""); ?>"
+                                        data-photo="<?php echo $order["delivery_photo"] ? "../delivery_proof.php?order_id=" . (int)$order["id"] : ""; ?>"
+                                        data-payment="<?php echo $order["payment_proof"] ? "../payment_proof.php?order_id=" . (int)$order["id"] : ""; ?>">
+                                        <i class="fa-solid fa-camera"></i> View Proof
+                                    </button>
                                 <?php } ?>
                                 <?php if (in_array($order["status"], ["Confirmed", "Assigned"])) { ?>
                                     <form method="POST" style="display:inline-flex;gap:4px;align-items:center;">
@@ -144,7 +176,7 @@ $cssPath = "../style.css";
                                             $drivers->data_seek(0);
                                             while ($d = $drivers->fetch_assoc()) {
                                             ?>
-                                                <option value="<?php echo (int)$d["id"]; ?>" <?php echo (int)$d["id"] === (int)$order["driver_id"] ? "selected" : ""; ?>><?php echo e($d["fullname"]); ?> (<?php echo (int)$d["active_orders"]; ?> active)</option>
+                                                <option value="<?php echo (int)$d["id"]; ?>" <?php echo (int)$d["id"] === (int)$order["driver_id"] ? "selected" : ""; ?>><?php echo e($d["fullname"]); ?> (<?php echo (int)$d["active_orders"]; ?> active<?php echo (int)$d["is_online"] === 1 ? "" : ", offline"; ?>)</option>
                                             <?php } ?>
                                         </select>
                                         <button type="submit" name="dispatch_order" class="btn btn-sm btn-dark"><?php echo $order["status"] === "Assigned" ? "Reassign" : "Assign Driver"; ?></button>
@@ -206,5 +238,68 @@ $cssPath = "../style.css";
         </form>
     </div>
 </div>
+
+<!-- PROOF OF DELIVERY (admin / cashier review) -->
+<div class="modal-overlay" id="proofModal" style="display:none;">
+    <div class="modal-card" style="max-width:480px;text-align:left;">
+        <button class="modal-close" onclick="document.getElementById('proofModal').style.display='none'">&times;</button>
+        <h3 style="margin-bottom:16px;color:var(--green-dark);">Proof of Delivery <span id="proofOrder" style="font-size:14px;color:var(--gray-500);"></span></h3>
+        <div class="receipt-line"><span>Customer</span><span id="proofCustomer"></span></div>
+        <div class="receipt-line"><span>Rider</span><span id="proofDriver"></span></div>
+        <div class="receipt-line"><span>Delivered on</span><span id="proofDelivered"></span></div>
+        <div class="receipt-line"><span>Empty containers collected</span><span id="proofEmpties"></span></div>
+        <div class="receipt-line"><span>Rider's notes</span><span id="proofNotes"></span></div>
+        <div id="proofPhotoBox" style="margin-top:14px;">
+            <p style="font-size:13px;font-weight:600;color:var(--green-dark);margin-bottom:6px;">Delivery Photo</p>
+            <a id="proofPhotoLink" href="#" target="_blank"><img id="proofPhoto" alt="Delivery photo" style="width:100%;border-radius:8px;"></a>
+        </div>
+        <p id="proofNoPhoto" style="display:none;font-size:13px;color:var(--gray-500);margin-top:14px;">No delivery photo was submitted for this order (delivered before photos were required).</p>
+        <div id="proofPaymentBox" style="margin-top:14px;display:none;">
+            <p style="font-size:13px;font-weight:600;color:var(--green-dark);margin-bottom:6px;">GCash Payment Photo</p>
+            <a id="proofPaymentLink" href="#" target="_blank"><img id="proofPayment" alt="GCash payment photo" style="width:100%;border-radius:8px;"></a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show the delivery evidence the rider submitted for an order.
+document.querySelectorAll(".view-proof").forEach(function(button) {
+    button.addEventListener("click", function() {
+        const d = button.dataset;
+        document.getElementById("proofOrder").textContent = d.order;
+        document.getElementById("proofCustomer").textContent = d.customer;
+        document.getElementById("proofDriver").textContent = d.driver;
+        document.getElementById("proofDelivered").textContent = d.delivered || "Not recorded";
+        document.getElementById("proofEmpties").textContent = d.empties !== "" ? d.empties : "Not recorded";
+        document.getElementById("proofNotes").textContent = d.notes || "—";
+
+        const hasPhoto = d.photo !== "";
+        document.getElementById("proofPhotoBox").style.display = hasPhoto ? "block" : "none";
+        document.getElementById("proofNoPhoto").style.display = hasPhoto ? "none" : "block";
+        if (hasPhoto) {
+            document.getElementById("proofPhoto").src = d.photo;
+            document.getElementById("proofPhotoLink").href = d.photo;
+        }
+
+        const hasPayment = d.payment !== "";
+        document.getElementById("proofPaymentBox").style.display = hasPayment ? "block" : "none";
+        if (hasPayment) {
+            document.getElementById("proofPayment").src = d.payment;
+            document.getElementById("proofPaymentLink").href = d.payment;
+        }
+
+        document.getElementById("proofModal").style.display = "flex";
+    });
+});
+
+// Ask before cancelling an order.
+document.querySelectorAll(".cancel-order-form").forEach(function(form) {
+    form.addEventListener("submit", function(event) {
+        if (!confirm("Cancel this order? The customer will be notified. This cannot be undone.")) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
 </body>
 </html>

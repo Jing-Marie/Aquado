@@ -43,6 +43,7 @@ $cssPath = "../style.css";
     <title>Master Dashboard - Aquado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../style.css?v=<?php echo ASSET_VERSION; ?>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <?php include __DIR__ . "/../includes/pwa_head.php"; ?>
 </head>
 <body>
@@ -106,6 +107,13 @@ $cssPath = "../style.css";
         </div>
 
         <div class="card" style="margin-top:8px;">
+            <h3 style="color:var(--green-dark);margin-bottom:4px;"><i class="fa-solid fa-location-dot"></i> Live Rider Locations</h3>
+            <p class="page-subtitle" id="dashboardMapStatus">Loading rider locations...</p>
+            <div id="dashboardMap" class="dashboard-map"></div>
+            <a href="driver_locations.php" class="btn btn-sm btn-primary" style="margin-top:16px;">Open Driver Locations</a>
+        </div>
+
+        <div class="card" style="margin-top:8px;">
             <h3 style="color:var(--green-dark);margin-bottom:4px;">Container Inventory</h3>
             <p class="page-subtitle">Current stock levels at the station</p>
             <div class="inventory-mini-grid">
@@ -130,5 +138,8 @@ $cssPath = "../style.css";
         <div class="shape-orange"></div>
     </div>
 </div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/dashboard_map.js?v=<?php echo ASSET_VERSION; ?>"></script>
 </body>
 </html>
