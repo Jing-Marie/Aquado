@@ -127,41 +127,108 @@ Updates appear automatically. There's nothing to reinstall when the website chan
 
 ---
 
-## Deploying to Vercel (Docker container, free TiDB Cloud database)
+## Deploying to Vercel with a free TiDB Cloud database
 
-Vercel does not run PHP natively. This project includes a `Dockerfile`, a `Caddyfile` and a `.dockerignore`, which Vercel's Container Runtime (Beta) builds. The database is a separate MySQL service, because InfinityFree does not allow outside connections to its databases.
+This is the setup for the live site (**https://aquado.vercel.app**). Vercel runs the PHP app as a container, and TiDB Cloud stores the data. Both run in Singapore, so each database query stays close to the app.
 
-This guide uses **TiDB Cloud Starter**, which has a free tier (5 GiB storage and 50 million request units a month per instance, no credit card needed).
+| Part | Where | What it is |
+|---|---|---|
+| App | Vercel, region `sin1` (Singapore) | Built from the root `Dockerfile` with the **Container** preset. The region is set in `vercel.json`. |
+| Database | TiDB Cloud Starter, region `ap-southeast-1` (Singapore) | MySQL-compatible, with a free tier (5 GiB storage and 50 million request units a month per instance). No credit card needed. |
 
-### 1. Create the database (TiDB Cloud)
+InfinityFree can't be used for the database, because it doesn't allow outside connections.
 
-1. Sign up at **tidbcloud.com** and create a **Starter** instance on **AWS**. Choose the region closest to you. Singapore (`ap-southeast-1`) is closest to the Philippines.
-2. Open the instance's networking settings. Make sure the **public endpoint** is on, and add the IP rule `0.0.0.0/0`. Vercel's outgoing IP addresses change, so the password and TLS are what protect the database.
-3. Click **Connect** (top right), then **Connect With: MySQL CLI**, then **Generate Password**. The password is shown only once. Write down the **host**, the **port** (4000) and the **username**. The username looks like `PREFIX.root`; keep the prefix and the dot.
-4. Create the database. Replace `HOST` and `PREFIX`, then enter the password when asked:
+### 1. Create the database in TiDB Cloud
+
+1. Sign up at **tidbcloud.com**. Create a **Starter** instance on **AWS** in region **ap-southeast-1 (Singapore)**.
+2. Open the instance's networking settings. Turn on the **public endpoint** and add the IP rule `0.0.0.0/0`. Vercel's outgoing IP addresses change, so the password and TLS protect the database instead.
+3. Click **Connect** (top right), choose **Connect With: MySQL CLI**, then click **Generate Password**. The password is shown only once, so save it somewhere safe.
+4. Note three values from the Connect dialog:
+   - **Host**, for example `gateway01.ap-southeast-1.prod.aws.tidbcloud.com`. Use the one shown for your instance.
+   - **Port**: `4000`.
+   - **Username**: `PREFIX.root`. The part before the dot is your prefix. Use the username from the dialog, not your TiDB login name or email.
+
+> On a Mac, the `mysql` command in Terminal can fail with *"Authentication plugin 'mysql_native_password' cannot be loaded"*. Use the **SQL Editor** method below instead. It needs no local tools.
+
+### 2. Load the data
+
+Use the **SQL Editor** of your TiDB instance. Each step copies a file to the clipboard with Terminal, then you paste it into the editor.
+
+In the editor, click inside it, press **Cmd+A**, then **Delete**, then **Cmd+V**, then **Run**. Afterwards, refresh the schema list and expand **aquado**.
+
+Choose one option:
+
+**Option A: empty tables and the product list (from this repository)**
+
+From the project folder, run:
+
+```bash
+(echo 'CREATE DATABASE IF NOT EXISTS aquado;'; echo 'USE aquado;'; grep -vE '^/\*!|^/\*M!' database/aquado_schema.sql) | pbcopy
+```
+
+Paste and run. You should see 10 tables and 6 products. There are no accounts yet, so create staff accounts in step 3.
+
+**Option B: all of the owner's data (private)**
+
+This file is not in the repository. It holds customers' names, phone numbers and addresses, and the accounts' login details. The owner creates it as `aquado_tidb_import.sql` in the project folder. Keep it private.
+
+```bash
+pbcopy < aquado_tidb_import.sql
+```
+
+Paste and run. You should see 10 tables, 5 accounts, 7 orders and 6 products. Then **change every account's password straight away** (step 3). These accounts still use the old demo passwords, and anyone who knows them can sign in to the Operations app.
+
+To check the tables, run `SHOW TABLES;` in the SQL Editor. You should see 10 tables.
+
+### 3. Staff accounts
+
+Option A has no accounts. Option B has accounts with old passwords, which must be changed.
+
+For each person, run one of these in Terminal. Paste the output into the SQL Editor, then run it. Replace the values in capitals and the email.
+
+To create an account (Option A):
+
+```bash
+php -r 'echo "USE aquado;\nINSERT INTO users (fullname, email, password, role) VALUES (\"Admin\", \"admin@yourstation.test\", \"" . password_hash("CHOOSE-A-STRONG-PASSWORD", PASSWORD_DEFAULT) . "\", \"admin\");\n";' | pbcopy
+```
+
+To change an existing account's password (Option B):
+
+```bash
+php -r 'echo "USE aquado;\nUPDATE users SET password = \"" . password_hash("NEW-STRONG-PASSWORD", PASSWORD_DEFAULT) . "\" WHERE email = \"admin@yourstation.test\";\n";' | pbcopy
+```
+
+Roles are `admin`, `cashier`, `driver` and `customer`. Staff sign in at `/Operations/`. Customers register on the site.
+
+### 4. Deploy on Vercel
+
+1. **Import the repository.** In Vercel, choose **Add New → Project**, then import `Jing-Marie/Aquado`. Name the project `aquado`, so the site address is `aquado.vercel.app`.
+2. **Set the Container preset.** The project must use the **Container** framework preset. If the site shows PHP code instead of pages, the project is still on the static preset. The dashboard may not show this option, so use the command line:
 
    ```bash
-   mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p -e "CREATE DATABASE IF NOT EXISTS aquado;"
+   npm install -g vercel
    ```
-
-5. Import the tables from this repository. Run it from the project folder:
 
    ```bash
-   grep -vE '^/\*!|^/\*M!' database/aquado_schema.sql | mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado
+   vercel login
    ```
-
-   The `grep` removes MySQL-only setting lines. The table and data statements stay.
-
-6. Check the tables. You should see 10, including `sessions` and `payment_proofs`.
 
    ```bash
-   mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado -e "SHOW TABLES;"
+   vercel project update aquado --framework container --yes --scope YOUR-TEAM-SLUG
    ```
 
-### 2. Deploy on Vercel
+   `YOUR-TEAM-SLUG` is the name in your Vercel address (`vercel.com/YOUR-TEAM-SLUG/...`). If the project is on your personal account, use your account name.
 
-1. Choose **Add New → Project**, then import the GitHub repository. Vercel detects the root `Dockerfile` and selects the **Container** preset.
-2. Before deploying, add these **environment variables**. Set them for **Production** only, so preview deployments don't write to the live database.
+   To confirm, run:
+
+   ```bash
+   vercel project inspect aquado --scope YOUR-TEAM-SLUG
+   ```
+
+   The output should show **Framework Preset: Container**.
+
+3. **Region.** The repository's `vercel.json` sets `"regions": ["sin1"]`, which runs the app in Singapore next to the database. Don't remove it.
+4. **Environment variables.** In **Settings → Environment Variables**, add these for **Production** only. Preview deployments shouldn't write to the live database.
 
    | Name | Value |
    |---|---|
@@ -172,39 +239,42 @@ This guide uses **TiDB Cloud Starter**, which has a free tier (5 GiB storage and
    | `DB_NAME` | `aquado` |
    | `DB_SSL` | `true` |
 
-3. Click **Deploy**. The first build can take a few minutes.
-4. Open the `*.vercel.app` address. It should redirect to `/Finals/`.
+   Don't use Marketplace integrations for these. They create variables with other names.
 
-### 3. Create staff accounts
+5. **Deploy.** Each push to `main` deploys automatically. After changing the preset or the environment variables, redeploy from **Deployments**: open the latest deployment, choose **⋮**, then **Redeploy**, with the build cache turned off. A build takes about a minute. The newest deployment should show **Ready**, with region `sin1`.
 
-Change the name, email, role (`admin`, `cashier` or `driver`) and password. Then run:
+### 5. Check the site
 
-```bash
-php -r 'echo "INSERT INTO users (fullname, email, password, role) VALUES (\"Admin\", \"admin@yourstation.test\", \"" . password_hash("CHOOSE-A-STRONG-PASSWORD", PASSWORD_DEFAULT) . "\", \"admin\");", "\n";' | mysql --ssl-mode=REQUIRED -h HOST -P 4000 -u 'PREFIX.root' -p aquado
-```
+| Open | Expect |
+|---|---|
+| `https://aquado.vercel.app/` | Redirects to `/Finals/` and shows the page |
+| `https://aquado.vercel.app/Finals/home.php` | The web page, not PHP code |
+| `https://aquado.vercel.app/robots.txt` | Text starting with `User-agent: *` |
+| `https://aquado.vercel.app/sitemap.xml` | A list of pages |
+| `https://aquado.vercel.app/config.php` | Blocked (403) |
+| `https://aquado.vercel.app/Operations/` | The staff sign-in page. A staff account signs in. |
 
-Staff log in at `/Operations/`. Customers register on the site.
-
-### 4. Test
-
-- Register, log in, add to cart and check out (cash on delivery).
-- Log in to `/Operations/` as admin, confirm and dispatch the order. The driver accepts, picks up and delivers it.
-- Refresh a logged-in page a few times. You should stay logged in.
-- `/robots.txt` and `/sitemap.xml` return text. `/config.php` is blocked.
+To confirm the database is reached, sign in at `/Operations/` with a wrong password. The message should be "Invalid email or password", not "Database connection failed".
 
 ### Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| "Database connection failed" | Check that `DB_PORT` is `4000`, `DB_USER` includes the prefix and `DB_SSL` is `true`. Then redeploy, because variable changes need a new deployment. |
-| Connection refused or timeout | The public endpoint is off, or the `0.0.0.0/0` rule is missing. |
-| Stops accepting connections partway through a month | The free monthly quota is used up. It resets each month, or you can raise the quota in the TiDB console. |
-| Import shows an error | Copy the message and send it with the step number. |
+| The site shows PHP code | The preset is not Container. Run the `vercel project update` command in step 4. |
+| "Database connection failed" | Check that `DB_PORT` is `4000`, `DB_USER` is `PREFIX.root` and `DB_SSL` is `true`. Redeploy after changing variables. |
+| Connection refused or times out | The TiDB public endpoint is off, or the `0.0.0.0/0` rule is missing. |
+| Terminal says `mysql_native_password` cannot be loaded | Use the SQL Editor method in step 2. |
+| SQL Editor: "Unknown database 'aquado'" | The first line creates the database. Make sure you copied the whole file with `pbcopy`. |
+| SQL Editor: "Parsing sql failed" | You pasted a Terminal command. Paste only the SQL that `pbcopy` copied. |
+| Pages take several seconds | Check that `vercel.json` has `"regions": ["sin1"]` and that the newest deployment shows `sin1`. |
+| Staff are signed out at random | The `sessions` table is missing. Check that `SHOW TABLES` lists it. |
+| Photo upload fails | Photos over 4.5 MB can't go through Vercel. The driver page shrinks photos first, so keep JavaScript turned on. |
+| Connections are refused partway through a month | The free monthly quota is used up. It resets each month, or you can raise the quota in the TiDB console. |
 
 ### Notes
 
+- **This repository is public.** Never commit database exports, login details or passwords. `aquado.sql` and `aquado_tidb_import.sql` are git-ignored; keep them that way.
+- `DB_SSL=true` encrypts the connection, but it doesn't check the server's certificate.
 - Login sessions and GCash payment photos are stored in the database. Each shrunk photo is about 150–600 KB.
-- `DB_SSL=true` encrypts the connection but does not check the server certificate.
 - Vercel's Hobby plan is for personal, non-commercial use. Check Vercel's terms before using it for the business.
-- Keep the repository private, because this guide names the default staff passwords.
-- **PlanetScale** is a paid alternative (its smallest plan is about $39 a month, plus storage). Its import needs safe migrations turned off on the `main` branch first, and its port is 3306, so leave `DB_PORT` at 3306 or unset.
+- PlanetScale is a paid alternative. Its smallest plan is about $39 a month, plus storage.
